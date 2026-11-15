@@ -35,6 +35,12 @@ ACITA417_Lab_XCharacter::ACITA417_Lab_XCharacter()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
+	// Enables the %Tick so the player state variables update every frame.
+	PrimaryActorTick.bCanEverTick = true;
+
+	// Setting the intial movement speed to the WalkSpeed variable.
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -65,6 +71,10 @@ void ACITA417_Lab_XCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACITA417_Lab_XCharacter::Look);
+
+		// Binding Sprint
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ACITA417_Lab_XCharacter::StartSprinting);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ACITA417_Lab_XCharacter::StopSprinting);
 	}
 	else
 	{
@@ -128,6 +138,95 @@ void ACITA417_Lab_XCharacter::DoJumpStart()
 
 void ACITA417_Lab_XCharacter::DoJumpEnd()
 {
-	// signal the character to stop jumping
+	// Signals the character to stop jumping.
 	StopJumping();
+}
+
+void ACITA417_Lab_XCharacter::Tick(float DeltaTime)
+{
+	// Calling the parent class Tick behavior.
+	Super::Tick(DeltaTime);
+
+	// Recalculating Speed, Direction, and bIsAirborne every frame.
+	UpdateCharacterState();
+}
+
+void ACITA417_Lab_XCharacter::UpdateCharacterState()
+{
+	// Retrieving the character's current velocity vector.
+	FVector Velocity = GetVelocity();
+
+	// Zero out the Z axis so jumping or falling does not affect horizontal ground speed.
+	Velocity.Z = 0.0f;
+
+	// Calculate horizontal ground speed in cm/s
+	Speed = Velocity.Size();
+
+	// Checks the CharacterMovementComponent to determine if the character is in mid-air.
+	if (GetCharacterMovement())
+	{
+		bIsAirborne = GetCharacterMovement()->IsFalling();
+	}
+
+	// Calculates movement angle relative to forward direction when moving.
+	if (Speed > 3.0f)
+	{
+		// Normalizing the velocity to get a pure direction unit vector.
+		FVector MoveDir = Velocity.GetSafeNormal();
+
+		// Getting the player's forward and right facing vectors.
+		FVector Forward = GetActorForwardVector();
+		FVector Right = GetActorRightVector();
+
+		// Projecting movement direction onto forward and right axes.
+		float ForwardDot = FVector::DotProduct(Forward, MoveDir);
+		float RightDot = FVector::DotProduct(Right, MoveDir);
+
+		// Computing signed angle in degrees.
+		Direction = FMath::RadiansToDegrees(FMath::Atan2(RightDot, ForwardDot));
+	}
+	else
+	{
+		// Reseting the angle to zero when standing still.
+		Direction = 0.0f;
+	}
+
+	// Displaying live animation input state on screen for debugging verification.
+	if (GEngine)
+	{
+		FString DebugMsg = FString::Printf(
+			TEXT("Speed: %.1f | Direction: %.1f | Airborne: %s | Sprinting: %s"),
+			Speed,
+			Direction,
+			bIsAirborne ? TEXT("TRUE") : TEXT("FALSE"),
+			bIsSprinting ? TEXT("TRUE") : TEXT("FALSE")
+		);
+
+		// Key 1 ensures the message updates in place rather than flooding the screen.
+		GEngine->AddOnScreenDebugMessage(1, 0.0f, FColor::Cyan, DebugMsg);
+	}
+}
+
+void ACITA417_Lab_XCharacter::StartSprinting()
+{
+	// Set sprinting flag to true
+	bIsSprinting = true;
+
+	// Increasing character movement speed to SprintSpeed.
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+	}
+}
+
+void ACITA417_Lab_XCharacter::StopSprinting()
+{
+	// Set sprinting flag to false
+	bIsSprinting = false;
+
+	// Reset character movement speed back to WalkSpeed.
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	}
 }

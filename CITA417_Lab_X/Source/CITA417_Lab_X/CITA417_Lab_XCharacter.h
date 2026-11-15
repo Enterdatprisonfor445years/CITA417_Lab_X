@@ -44,15 +44,24 @@ protected:
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* LookAction;
+	
+	// Sprint Input Action
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* SprintAction;
 
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
 
+
+
 public:
 
 	/** Constructor */
-	ACITA417_Lab_XCharacter();	
+	ACITA417_Lab_XCharacter();
+
+	// Called every fram to update the player's movement and animation state.
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 
@@ -66,6 +75,39 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	// Current horizontal ground speed of the character in cm/s
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character State")
+	float Speed = 0.0f;
+
+	// Movement angle relative to the character's forward facing direction (-180 to 180 degrees)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character State")
+	float Direction = 0.0f;
+
+	// True when the character is jumping or falling in mid-air
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character State")
+	bool bIsAirborne = false;
+
+	// True when the player is actively holding the sprint input
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character State")
+	bool bIsSprinting = false;
+
+	// Default movement speed when walking or jogging
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement Settings")
+	float WalkSpeed = 500.0f;
+
+	// Increased movement speed when sprinting
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement Settings")
+	float SprintSpeed = 800.0f;
+
+	// Updates Speed, Direction, and bIsAirborne every frame
+	void UpdateCharacterState();
+
+	// Enables sprinting state and increases MaxWalkSpeed
+	void StartSprinting();
+
+	// Disables sprinting state and resets MaxWalkSpeed
+	void StopSprinting();
 
 public:
 
