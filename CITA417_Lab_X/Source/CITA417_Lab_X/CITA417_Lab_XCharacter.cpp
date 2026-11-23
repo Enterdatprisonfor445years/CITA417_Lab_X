@@ -11,6 +11,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "CITA417_Lab_X.h"
+// Include WeaponActor for spawning and firing the equipped weapon
+#include "WeaponActor.h"
+// Include TimerManager for resetting the attack animation flag
+#include "TimerManager.h"
 
 ACITA417_Lab_XCharacter::ACITA417_Lab_XCharacter()
 {
@@ -75,6 +79,10 @@ void ACITA417_Lab_XCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		// Binding Sprint
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ACITA417_Lab_XCharacter::StartSprinting);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ACITA417_Lab_XCharacter::StopSprinting);
+
+		// Bind Attack input action to trigger weapon firing
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ACITA417_Lab_XCharacter::Attack);
+
 	}
 	else
 	{
@@ -229,4 +237,64 @@ void ACITA417_Lab_XCharacter::StopSprinting()
 	{
 		GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	}
+}
+
+void ACITA417_Lab_XCharacter::BeginPlay()
+{
+	// Call parent character BeginPlay
+	Super::BeginPlay();
+
+	// Safely check if a WeaponClass was assigned in Blueprints before spawning
+	if (WeaponClass && GetWorld())
+	{
+		// Configure spawn parameters so this character owns the weapon
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = GetInstigator();
+
+		// Spawn the weapon actor into the world
+		EquippedWeapon = GetWorld()->SpawnActor<AWeaponActor>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+		// Attach the spawned weapon to the character's skeletal mesh socket
+		if (EquippedWeapon && GetMesh())
+		{
+			EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
+		}
+	}
+	else
+	{
+		// Log a clear warning instead of crashing when WeaponClass is unassigned
+		UE_LOG(LogTemp, Warning, TEXT("CITA417_Lab_XCharacter: WeaponClass is not assigned in Blueprint defaults."));
+	}
+}
+
+void ACITA417_Lab_XCharacter::Attack()
+{
+	// Safely validate EquippedWeapon so missing configuration never crashes the game
+	if (!EquippedWeapon)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(3, 2.0f, FColor::Red, TEXT("Attack Failed: No Weapon Equipped!"));
+		}
+		return;
+	}
+
+	// Set attacking state flag for Animation Blueprint integration
+	bIsAttacking = true;
+
+	// Schedule reset of bIsAttacking after 0.3 seconds
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimer(AttackAnimTimerHandle, this, &ACITA417_Lab_XCharacter::ResetAttackState, 0.3f, false);
+	}
+
+	// Delegate hit detection and damage delivery to the weapon actor
+	EquippedWeapon->Fire();
+}
+
+void ACITA417_Lab_XCharacter::ResetAttackState()
+{
+	// Reset attacking flag so Animation Blueprint returns to normal state
+	bIsAttacking = false;
 }

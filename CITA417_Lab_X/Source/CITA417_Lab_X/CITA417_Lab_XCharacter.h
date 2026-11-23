@@ -7,6 +7,7 @@
 #include "Logging/LogMacros.h"
 #include "CITA417_Lab_XCharacter.generated.h"
 
+
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
@@ -49,6 +50,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* SprintAction;
 
+	// Attack Input Action
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* AttackAction;
+
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
@@ -69,6 +74,9 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
+
+	// Called when the game starts to spawn and equip the default weapon
+	virtual void BeginPlay() override;
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -99,6 +107,31 @@ protected:
 	// Increased movement speed when sprinting
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement Settings")
 	float SprintSpeed = 800.0f;
+
+	// Blueprint weapon class to spawn and attach at game start
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
+	TSubclassOf<class AWeaponActor> WeaponClass;
+
+	// Reference to the currently equipped weapon instance
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	class AWeaponActor* EquippedWeapon;
+
+	// True briefly when the character triggers an attack (readable by AnimBP)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character State")
+	bool bIsAttacking = false;
+
+	// Socket name on the skeletal mesh where the weapon attaches
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
+	FName WeaponSocketName = TEXT("hand_r");
+
+	// Timer handle to reset bIsAttacking after the attack pulse
+	FTimerHandle AttackAnimTimerHandle;
+
+	// Handles player attack input and delegates firing to EquippedWeapon
+	void Attack();
+
+	// Resets bIsAttacking flag back to false
+	void ResetAttackState();
 
 	// Updates Speed, Direction, and bIsAirborne every frame
 	void UpdateCharacterState();
