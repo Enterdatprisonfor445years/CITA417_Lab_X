@@ -68,6 +68,11 @@ public:
 	// Called every fram to update the player's movement and animation state.
 	virtual void Tick(float DeltaTime) override;
 
+
+	// Handles player attack input and delegates firing to EquippedWeapon
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void Attack();
+
 protected:
 
 	/** Initialize input action bindings */
@@ -127,8 +132,10 @@ protected:
 	// Timer handle to reset bIsAttacking after the attack pulse
 	FTimerHandle AttackAnimTimerHandle;
 
-	// Handles player attack input and delegates firing to EquippedWeapon
-	void Attack();
+	// Reusable health component so both player and enemy can take damage
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UHealthComponent* HealthComp;
+
 
 	// Resets bIsAttacking flag back to false
 	void ResetAttackState();

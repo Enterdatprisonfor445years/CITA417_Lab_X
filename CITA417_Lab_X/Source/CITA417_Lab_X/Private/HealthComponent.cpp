@@ -26,6 +26,8 @@ void UHealthComponent::BeginPlay()
 	AActor* Owner = GetOwner();
 	if (Owner)
 	{
+		// Ensure the owning actor is allowed to receive Unreal damage events
+		Owner->SetCanBeDamaged(true);
 		// Register HandleTakeAnyDamage to run whenever Unreal's ApplyDamage hits this actor
 		Owner->OnTakeAnyDamage.AddDynamic(this, &UHealthComponent::HandleTakeAnyDamage);
 	}
